@@ -9,6 +9,10 @@ Let's suppose we want autocompletion for our search form that not only returns a
 
 So when a user types into the search form, we want to to show him all the possible movies matching his search phrases. That means the first thing we've got to do is dump the data we want to present into Redis. Like Soulmate, we use a Redis hash here, where each movie has its own unique key. The key can be anything as long as it's unique. If you don't have unique IDs for your data, you could use MD5 to generate some. But let's suppose we do have an unique ID, dumping the data into Redis is pretty simple:
 
+当一个用户在搜索框输入一些内容的时候，我们需要展示给用户和输入内容匹配的电影，这意味着我们第一件事要
+做的就是把电影信息存放在redis中，每个电影有它唯一的主键，可以使用MD5自己生成，现在假设我们已经有了
+唯一的主键，我们现在有十部电影：
+
 HSET moviesearch:data 1 "{\"name\":\"Kill Bill\",\"year\":2003}"
 HSET moviesearch:data 2 "{\"name\":\"King Kong\",\"year\":2005}"
 HSET moviesearch:data 3 "{\"name\":\"Killer Elite\",\"year\":2011}"
@@ -20,20 +24,22 @@ HSET moviesearch:data 8 "{\"name\":\"The Green Mile\",\"year\":1999}"
 HSET moviesearch:data 9 "{\"name\":\"The Dark Knight\",\"year\":2008}"
 HSET moviesearch:data 10 "{\"name\":\"The Dark Knight Rises\",\"year\":2012}"
 
-HSET is the Redis command to save something into a hash. The key for this hash is moviesearch:data. The single keys for every movie in this hash are the unique IDs: 1, 2, 3, .... And the data we're saving are JSON strings, which represent a pretty convenient way of saving objects to Redis. Also, it's easy enough in Ruby to convert a Ruby hash to JSON and after retrieving it from Redis back to a hash:
+通过HSET将电影信息保存到hash，以moviesearch:data作为key，通过ruby我们可以轻松的在redis
+和ruby之间进行转换。
 
 require 'json'
-
 # Before dumping to Redis:
 {name: 'Kill Bill', year: 2003}.to_json
 # => "{\"name\":\"Kill Bill\",\"year\":2003}"
-
 # After retrieving from Redis:
 JSON.parse("{\"name\":\"Kill Bill\",\"year\":2003}")
 # => {"name"=>"Kill Bill", "year"=>2003}
 
-Oh and btw. I'm using redis-rb as the Ruby client to connect to Redis, which does not only support Redis transactions and pipelining, but the best thing about this client is that the Redis commands have the same name and take the same arguments (well, most of the time), which is especially great when getting to know Redis and looking up commands in the documentation. So now we've got the movies in Redis, how do we find them again?
-Prefixes everywhere!
+顺便说一下，这里使用redis-rb作为Ruby连接Redis的工具，好，现在我们已经把电影存到Redis中了，下面看一下
+如何查找？
+
+通常，我们在搜索一个电影名字的时候，我们需要输入电影的名字到搜索框，而我们要做的是当用户还没有完全输入完电影名字的时候，展示于之匹配的几个电影供其选择，也就是自动补全，比如要搜索hello的时候，可以通过
+输入he, hel, hell, hello自动补全
 
 People are most likely trying to search for a movie by starting to type its name into the input field. And we want to show them the matching movies before they're even finished typing the whole name, right? That's why we're talking about autocompletion here. That means we need an association between word prefixes and the movies. If someone were to type in The Dar we want to show The Dark Knight and The Dark Knight Rises as possible search terms. Long story short: we need to get the prefixes of every movie we just dumped in our moviesearch:data hash. For that I'm using a simple method, which is heavily based on the one Sanfilippo uses in his example script:
 

@@ -1,0 +1,238 @@
+Redis 命令使用
+
+
+Redis Hset 命令
+Redis Hset 命令用于为哈希表中的字段赋值 。
+如果哈希表不存在，一个新的哈希表被创建并进行 HSET 操作。
+如果字段已经存在于哈希表中，旧值将被覆盖。
+
+redis 127.0.0.1:6379> HSET myhash field1 "foo"
+OK
+redis 127.0.0.1:6379> HGET myhash field1
+"foo"
+redis 127.0.0.1:6379> HSET website google "www.g.cn"
+(integer) 1
+redis 127.0.0.1:6379>HSET website google "www.google.com"
+(integer) 0
+
+Redis Hmset 命令
+Redis Hmset 命令用于同时将多个 field-value (字段-值)对设置到哈希表中。
+此命令会覆盖哈希表中已存在的字段。
+redis 127.0.0.1:6379> HSET myhash field1 "foo" field2 "bar"
+OK
+redis 127.0.0.1:6379> HGET myhash field1
+"foo"
+redis 127.0.0.1:6379> HMGET myhash field2
+"bar"
+
+Redis Hmget 命令
+Redis Hmget 命令用于返回哈希表中，一个或多个给定字段的值。
+redis 127.0.0.1:6379> HSET myhash field1 "foo"
+(integer) 1
+redis 127.0.0.1:6379> HSET myhash field2 "bar"
+(integer) 1
+redis 127.0.0.1:6379> HMGET myhash field1 field2
+1) "foo"
+2) "bar"
+
+
+Redis 有序集合(sorted set)
+Redis 有序集合和集合一样也是string类型元素的集合,且不允许重复的成员。
+不同的是每个元素都会关联一个double类型的分数。redis正是通过分数来为集合中的成员进行从小到大的排序。
+有序集合的成员是唯一的,但分数(score)却可以重复。
+集合是通过哈希表实现的，所以添加，删除，查找的复杂度都是O(1)。 集合中最大的成员数为(4294967295, 每个集合可存储40多亿个成员)。
+
+Redis Zadd 命令
+Redis Zadd 命令用于将一个或多个成员元素及其分数值加入到有序集当中。
+如果某个成员已经是有序集的成员，那么更新这个成员的分数值，并通过重新插入这个成员元素，来保证该成员在正确的位置上。
+分数值可以是整数值或双精度浮点数。
+如果有序集合 key 不存在，则创建一个空的有序集并执行 ZADD 操作。
+当 key 存在但不是有序集类型时，返回一个错误。
+
+redis 127.0.0.1:6379> ZADD myset 1 "hello"
+(integer) 1
+redis 127.0.0.1:6379> ZADD myset 1 "foo"
+(integer) 1
+redis 127.0.0.1:6379> ZADD myset 2 "world" 3 "bar"
+(integer) 2
+redis 127.0.0.1:6379> ZRANGE myzset 0 -1 WITHSCORES
+1) "hello"
+2) "1"
+3) "foo"
+4) "1"
+5) "world"
+6) "2"
+7) "bar"
+8) "3"
+
+Redis Zrange 命令
+Redis Zrange 返回有序集中，指定区间内的成员。
+其中成员的位置按分数值递增(从小到大)来排序。
+具有相同分数值的成员按字典序(lexicographical order )来排列。
+
+redis 127.0.0.1:6379> ZADD myset 2 "world" 3 "bar"
+(integer) 2
+redis 127.0.0.1:6379> ZADD myset 1 "hello"
+(integer) 1
+redis 127.0.0.1:6379> ZRANGE myset 0 -1 WITHSCORES
+1) "hello"
+2) "1"
+3) "world"
+4) "2"
+5) "bar"
+6) "3"
+
+Redis Zrevrange 命令
+Redis Zrevrange 命令返回有序集中，指定区间内的成员。
+其中成员的位置按分数值递减(从大到小)来排列。
+具有相同分数值的成员按字典序的逆序(reverse lexicographical order)排列。
+
+redis 127.0.0.1:6379> ZADD myset 2 "world" 3 "bar"
+(integer) 2
+redis 127.0.0.1:6379> ZADD myset 1 "hello"
+(integer) 1
+redis 127.0.0.1:6379> ZREVRANGE myset 0 -1 WITHSCORES
+1) "bar"
+2) "3"
+3) "world"
+4) "2"
+5) "hello"
+6) "1"
+
+Redis Zrank 命令
+Redis Zrank 返回有序集中指定成员的排名。其中有序集成员按分数值递增(从小到大)顺序排列。
+
+redis 127.0.0.1:6379> ZADD myset 2 "world" 3 "bar"
+(integer) 2
+redis 127.0.0.1:6379> ZADD myset 1 "hello"
+(integer) 1
+127.0.0.1:6379>  ZRANK  myset 'bar'
+(integer) 2 #排名第三
+
+
+Redis Zrangebyscore 命令
+Redis Zrangebyscore 返回有序集合中指定分数区间的成员列表。有序集成员按分数值递增(从小到大)次序排列。
+具有相同分数值的成员按字典序来排列(该属性是有序集提供的，不需要额外的计算)。
+默认情况下，区间的取值使用闭区间 (小于等于或大于等于)，你也可以通过给参数前增加 ( 符号来使用可选的开区间 (小于或大于)。
+ZRANGEBYSCORE zset (1 5
+返回所有符合条件 1 < score <= 5 的成员
+ZRANGEBYSCORE zset (5 (10
+返回所有符合条件 5 < score < 10 的成员。
+ZRANGEBYSCORE zset -inf +inf WITHSCORES
+显示整个有序集
+
+Redis Zinterstore 命令
+ZINTERSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]
+Redis Zinterstore 命令计算给定的一个或多个有序集的交集，其中给定 key 的数量必须以 numkeys 参数指定，并将该交集(结果集)储存到 destination 。
+默认情况下，结果集中某个成员的分数值是所有给定集下该成员分数值之和。
+# 有序集 mid_test
+redis 127.0.0.1:6379> ZADD mid_test 70 "Li Lei"
+(integer) 1
+redis 127.0.0.1:6379> ZADD mid_test 70 "Han Meimei"
+(integer) 1
+redis 127.0.0.1:6379> ZADD mid_test 99.5 "Tom"
+(integer) 1
+
+# 另一个有序集 fin_test
+redis 127.0.0.1:6379> ZADD fin_test 88 "Li Lei"
+(integer) 1
+redis 127.0.0.1:6379> ZADD fin_test 75 "Han Meimei"
+(integer) 1
+redis 127.0.0.1:6379> ZADD fin_test 99.5 "Tom"
+(integer) 1
+
+# 交集
+redis 127.0.0.1:6379> ZINTERSTORE sum_point 2 mid_test fin_test
+(integer) 3
+
+# 显示有序集内所有成员及其分数值
+redis 127.0.0.1:6379> ZRANGE sum_point 0 -1 WITHSCORES    
+1) "Han Meimei"
+2) "145"
+3) "Li Lei"
+4) "158"
+5) "Tom"
+6) "199"
+
+# 交集(WEIGHTS)  Li Lei=70+88*2, Han Meimei=70+75*2 ..
+redis 127.0.0.1:6379> ZINTERSTORE sum_point 2 mid_test fin_test WEIGHTS 1 2
+(integer) 3
+
+# 显示有序集内所有成员及其分数值
+redis 127.0.0.1:6379> ZRANGE sum_point 0 -1 WITHSCORES    
+1) "Han Meimei"
+2) "220"
+3) "Li Lei"
+4) "246"
+5) "Tom"
+6) "298.5"
+
+# 交集(WEIGHTS & AGGREGATE)  Li Lei=88*2, Han Meimei=75*2 ..
+redis 127.0.0.1:6379> ZINTERSTORE sum_point 2 mid_test fin_test WEIGHTS 1 2 AGGREGATE MAX
+(integer) 3
+
+# 显示有序集内所有成员及其分数值
+redis 127.0.0.1:6379> ZRANGE sum_point 0 -1 WITHSCORES    
+1) "Han Meimei"
+2) "150"
+3) "Li Lei"
+4) "176"
+5) "Tom"
+6) "199"
+
+
+Redis Zincrby 命令
+Redis Zincrby 命令对有序集合中指定成员的分数加上增量 increment
+可以通过传递一个负数值 increment ，让分数减去相应的值，比如 ZINCRBY key -5 member ，就是让 member 的 score 值减去 5 。
+
+redis 127.0.0.1:6379> ZADD myzset 1 "hello"
+(integer) 1
+redis 127.0.0.1:6379> ZADD myzset 1 "foo"
+(integer) 1
+redis 127.0.0.1:6379> ZINCRBY myzset 2 "hello"
+(integer) 3
+redis 127.0.0.1:6379> ZRANGE myzset 0 -1 WITHSCORES
+1) "foo"
+2) "2"
+3) "hello"
+4) "3"
+
+
+Redis Zunionstore 命令
+ZUNIONSTORE destination numkeys key [key ...] [WEIGHTS weight [weight ...]] [AGGREGATE SUM|MIN|MAX]
+Redis Zunionstore 命令计算给定的一个或多个有序集的并集，其中给定 key 的数量必须以 numkeys 参数指定，并将该并集(结果集)储存到 destination 。
+默认情况下，结果集中某个成员的分数值是所有给定集下该成员分数值之和 。
+redis 127.0.0.1:6379> ZRANGE programmer 0 -1 WITHSCORES
+1) "peter"
+2) "2000"
+3) "jack"
+4) "3500"
+5) "tom"
+6) "5000"
+
+redis 127.0.0.1:6379> ZRANGE manager 0 -1 WITHSCORES
+1) "herry"
+2) "2000"
+3) "mary"
+4) "3500"
+5) "bob"
+6) "4000"
+
+redis 127.0.0.1:6379> ZUNIONSTORE salary 2 programmer manager WEIGHTS 1 3   # 公司决定加薪。。。除了程序员。。。
+(integer) 6
+
+redis 127.0.0.1:6379> ZRANGE salary 0 -1 WITHSCORES
+1) "peter"
+2) "2000"
+3) "jack"
+4) "3500"
+5) "tom"
+6) "5000"
+7) "herry"
+8) "6000"
+9) "mary"
+10) "10500"
+11) "bob"
+12) "12000"
+
+
